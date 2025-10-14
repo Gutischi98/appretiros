@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registro de Retiro - Exportar a PDF</title>
+  <style>
+    :root{--accent:#0ea5a4;--bg:#f8fafc;--card:#ffffff}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0; padding:24px; color:#0f172a}
+    .container{max-width:900px;margin:0 auto}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+    form.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    label{font-size:13px;color:#334155}
+    input, textarea, select{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef6;font-size:14px}
+    .full{grid-column:1/-1}
+    .table-wrap{margin-top:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #e6eef6;padding:8px;text-align:left;font-size:14px}
+    th{background:#f1f5f9}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:white;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(14,165,164,0.14)}
+    .actions{display:flex;gap:8px;align-items:center;margin-top:12px}
+    .pdf-preview{margin-top:16px}
+    footer{margin-top:18px;text-align:center;color:#64748b;font-size:13px}
+    @media(max-width:640px){form.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Registro de Retiro - Exportar a PDF</h1>
+    </header>
+
+    <div class="card">
+      <form id="form">
+        <div class="grid">
+          <div>
+            <label>Nombre Funcionario:</label>
+            <input id="nombre" type="text" required placeholder="Ej: Juan Perez">
+          </div>
+          <div>
+            <label>RUT:</label>
+            <input id="rut" type="text" required placeholder="12345678-9">
+          </div>
+          <div>
+            <label>Fecha:</label>
+            <input id="fecha" type="date" required>
+          </div>
+          <div>
+            <label>Motivo de retiro:</label>
+            <input id="motivo" type="text" placeholder="Motivo">
+          </div>
+          <div class="full">
+            <label>Destino del retiro:</label>
+            <input id="destino" type="text" placeholder="Destino (Ej: Bodega central)">
+          </div>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <h3 style="margin:8px 0">Equipos agregados</h3>
+        <table id="equiposTable">
+          <thead>
+            <tr><th>Equipo</th><th>Serie</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <input id="eqNombre" placeholder="Equipo (Ej: Notebook)" style="flex:2;padding:8px;border-radius:6px;border:1px solid #e6eef6">
+          <input id="eqSerie" placeholder="Serie" style="flex:1;padding:8px;border-radius:6px;border:1px solid #e6eef6">
+          <select id="eqEstado" style="padding:8px;border-radius:6px;border:1px solid #e6eef6">
+            <option value="Bueno">Bueno</option>
+            <option value="Regular">Regular</option>
+            <option value="Dañado">Dañado</option>
+          </select>
+          <button id="addEq" class="btn" type="button">Agregar equipo</button>
+        </div>
+
+        <div class="actions">
+          <button id="exportPdf" class="btn" type="button">Exportar a PDF</button>
+          <button id="clearAll" class="btn ghost" type="button">Limpiar</button>
+        </div>
+
+        <p style="margin-top:10px;font-size:13px;color:#475569">Nota: el PDF genera un resumen con los datos del funcionario y la tabla de equipos.</p>
+      </div>
+    </div>
+
+    <footer>Gustavo "Guti" Solar - Concepción - 2025</footer>
+  </div>
+
+  <!-- Dependencias desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    // Manejo de tabla
+    const tbody = document.querySelector('#equiposTable tbody');
+    const addBtn = document.getElementById('addEq');
+    const exportBtn = document.getElementById('exportPdf');
+    const clearBtn = document.getElementById('clearAll');
+
+    function crearFila(equipo, serie, estado){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(equipo)}</td>
+        <td>${escapeHtml(serie)}</td>
+        <td>${escapeHtml(estado)}</td>
+        <td><button class="btn ghost" data-action="del">Eliminar</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    addBtn.addEventListener('click', ()=>{
+      const nombre = document.getElementById('eqNombre').value.trim();
+      const serie = document.getElementById('eqSerie').value.trim();
+      const estado = document.getElementById('eqEstado').value;
+      if(!nombre){ alert('Ingresa nombre del equipo'); return; }
+      crearFila(nombre, serie, estado);
+      document.getElementById('eqNombre').value = '';
+      document.getElementById('eqSerie').value = '';
+    });
+
+    tbody.addEventListener('click', (e)=>{
+      if(e.target?.dataset?.action === 'del'){
+        const row = e.target.closest('tr');
+        row.remove();
+      }
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      if(confirm('¿Limpiar todos los datos y equipos?')){
+        document.getElementById('form').reset();
+        tbody.innerHTML='';
+      }
+    });
+
+    // Exportar a PDF: generamos una vista temporal con los datos y la tabla, luego la convertimos con html2canvas + jsPDF
+    exportBtn.addEventListener('click', async ()=>{
+      const nombre = document.getElementById('nombre').value.trim();
+      const rut = document.getElementById('rut').value.trim();
+      const fecha = document.getElementById('fecha').value;
+      const motivo = document.getElementById('motivo').value.trim();
+      const destino = document.getElementById('destino').value.trim();
+
+      if(!nombre || !rut || !fecha){ alert('Completa Nombre, RUT y Fecha antes de exportar.'); return; }
+
+      // Crear contenedor invisible para render
+      const cover = document.createElement('div');
+      cover.style.padding='18px';
+      cover.style.background='white';
+      cover.style.width='800px';
+      cover.style.color='#0f172a';
+      cover.style.fontFamily='Arial, Helvetica, sans-serif';
+
+      const header = document.createElement('div');
+      header.innerHTML = `<h2 style="margin:0 0 8px 0">Registro de Retiro</h2>`;
+      cover.appendChild(header);
+
+      const info = document.createElement('div');
+      info.innerHTML = `
+        <div><strong>Nombre:</strong> ${escapeHtml(nombre)}</div>
+        <div><strong>RUT:</strong> ${escapeHtml(rut)}</div>
+        <div><strong>Fecha:</strong> ${escapeHtml(fecha)}</div>
+        <div><strong>Motivo:</strong> ${escapeHtml(motivo)}</div>
+        <div><strong>Destino:</strong> ${escapeHtml(destino)}</div>
+        <br>
+      `;
+      cover.appendChild(info);
+
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.innerHTML = `
+        <thead><tr><th style="border:1px solid #ddd;padding:6px">Equipo</th><th style="border:1px solid #ddd;padding:6px">Serie</th><th style="border:1px solid #ddd;padding:6px">Estado</th></tr></thead>
+      `;
+      const tb = document.createElement('tbody');
+      Array.from(tbody.querySelectorAll('tr')).forEach(r=>{
+        const cols = r.querySelectorAll('td');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="border:1px solid #ddd;padding:6px">${cols[0].innerText}</td><td style="border:1px solid #ddd;padding:6px">${cols[1].innerText}</td><td style="border:1px solid #ddd;padding:6px">${cols[2].innerText}</td>`;
+        tb.appendChild(tr);
+      });
+      table.appendChild(tb);
+      cover.appendChild(table);
+
+      document.body.appendChild(cover);
+
+      try{
+        const canvas = await html2canvas(cover, {scale:2});
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        // A4 vertical
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        // calcular tamaño manteniendo aspecto
+        const imgProps = { width: canvas.width, height: canvas.height };
+        const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+        const imgWidth = imgProps.width * ratio;
+        const imgHeight = imgProps.height * ratio;
+
+        pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth)/2, 20, imgWidth, imgHeight);
+        // si la imagen es más alta que la página, podríamos añadir paginación (no implementada en este ejemplo simple)
+        pdf.save(`retiro_${sanitizeFilename(nombre)}_${fecha}.pdf`);
+      }catch(err){
+        alert('Error generando PDF: '+err);
+      }finally{
+        cover.remove();
+      }
+    });
+
+    // Helpers
+    function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+    function sanitizeFilename(s){ return s.replace(/[^a-z0-9_\-]/gi,'_'); }
+  </script>
+</body>
+</html>
