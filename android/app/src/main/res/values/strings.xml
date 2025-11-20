@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AppRetiros</string>
+    <string name="title_activity_main">AppRetiros</string>
+    <string name="package_name">com.appretiros.app</string>
+    <string name="custom_url_scheme">com.appretiros.app</string>
+</resources>
