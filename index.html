@@ -55,6 +55,7 @@
         border-radius: 6px;
         border: 1px solid #e6eef6;
         font-size: 14px;
+        box-sizing: border-box; /* Asegura que el padding no deforme el input */
       }
       .full {
         grid-column: 1/-1;
@@ -170,22 +171,26 @@
           <div
             style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap"
           >
-            <select
+            <input
               id="eqNombre"
+              list="eqNombreLista"
+              placeholder="Selecciona o escribe equipo..."
               style="
                 flex: 2;
                 padding: 8px;
                 border-radius: 6px;
                 border: 1px solid #e6eef6;
               "
-            >
-              <option value="Desktop">Desktop</option>
-              <option value="Notebook">Notebook</option>
-              <option value="Impresora">Impresora</option>
-              <option value="Monitor">Monitor</option>
-              <option value="Scanner">Scanner</option>
-              <option value="Docking">Docking</option>
-            </select>
+            />
+            <datalist id="eqNombreLista">
+              <option value="Desktop"></option>
+              <option value="Notebook"></option>
+              <option value="Impresora"></option>
+              <option value="Monitor"></option>
+              <option value="Scanner"></option>
+              <option value="Docking"></option>
+            </datalist>
+
             <input
               id="eqSerie"
               placeholder="Serie"
@@ -230,7 +235,6 @@
       <footer>Gustavo "Guti" Solar - Concepción - 2025</footer>
     </div>
 
-    <!-- Dependencias desde CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -257,7 +261,7 @@
         const serie = document.getElementById("eqSerie").value.trim();
         const estado = document.getElementById("eqEstado").value;
         if (!nombre) {
-          alert("Ingresa nombre del equipo");
+          alert("Ingresa o selecciona el nombre del equipo");
           return;
         }
         crearFila(nombre, serie, estado);
@@ -359,7 +363,6 @@
             imgWidth,
             imgHeight
           );
-          // si la imagen es más alta que la página, podríamos añadir paginación (no implementada en este ejemplo simple)
           pdf.save(`retiro_${sanitizeFilename(nombre)}_${fecha}.pdf`);
         } catch (err) {
           alert("Error generando PDF: " + err);
